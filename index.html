@@ -61,10 +61,10 @@
     <h2 style="margin-top:40px;">📡 Call Control Console</h2>
 
     <label>From</label>
-    <div class="phoneBox"><span>+880</span><input id="fromNumber" type="tel" inputmode="numeric" maxlength="10"></div>
+    <div class="phoneBox"><span>+88</span><input id="fromNumber" type="tel" inputmode="text" maxlength="20"></div>
 
     <label>To</label>
-    <div class="phoneBox"><span>+880</span><input id="toNumber" type="tel" inputmode="text" maxlength="11"></div>
+    <div class="phoneBox"><span>+88</span><input id="toNumber" type="tel" inputmode="text" maxlength="20"></div>
     
     <!-- Timer ring (hidden when Auto OFF) -->
     <div class="circleWrap" id="timerRing">
@@ -130,8 +130,7 @@
         <h3>ℹ️ Help</h3>
         <div style="font-size:14px;line-height:1.5;color:#cbd5e1;">
             <p>• Enter a registered number in "From" field from where the call will be placed.</p>
-            <p>• Enter any number in "To" field where the call will ring. (10 digits).</p>
-            <p>• The app automatically adds 0 for calling, so avoid adding 0 at the beginning of numbers.</p>
+            <p>• Enter any number in "To" field where the call will ring. (1-20 characters: digits, *, #).</p>
             <p>• Use Auto mode for repeated calls.</p>
             <p>• Use Manage registered numbers to register a new number along with url.</p>
         </div>
@@ -179,20 +178,6 @@ function updateTimerVisibility() {
     }
 }
 
-function norm(n) {
-    if (!n) return "";
-    n = String(n).replace(/\D/g,'');
-    if (n.startsWith("880")) n = n.slice(3);
-    return n.replace(/^0+/, '');
-}
-
-function formatForCall(n) {
-    n = String(n).replace(/\D/g,'');
-    if (n.startsWith("880")) n = n.slice(3);
-    if (!n.startsWith("0") && n.length === 10) n = "0" + n;
-    return n;
-}
-
 function show(msg, isError = false) {
     const p = document.getElementById("popup");
     p.textContent = msg;
@@ -204,11 +189,11 @@ function show(msg, isError = false) {
 async function startCall() {
     const f = document.getElementById("fromNumber").value;
     const t = document.getElementById("toNumber").value;
-    const nf = norm(f);                    // From still normalized for lookup
-    const nt = t.trim();                   // To = raw input (no formatting)
+    const nf = f.trim();                    // From = raw
+    const nt = t.trim();                    // To = raw
 
-    if (nf.length !== 10) return show("From must be 10 digits", true);
-    if (nt.length < 1 || nt.length > 11) return show("To must be 1-11 characters (digits, *, #)", true);
+    if (nf.length < 1 || nf.length > 20) return show("From must be 1-20 characters", true);
+    if (nt.length < 1 || nt.length > 20) return show("To must be 1-20 characters (digits, *, #)", true);
 
     if (blockedNumbers.includes(nf) || blockedNumbers.includes(nt)) {
         return show("This number is blocked", true);
@@ -256,12 +241,12 @@ async function startCall() {
 
     countdown = interval;
 }
-    
+
 function addRegisteredNumber() {
-    const num = norm(document.getElementById("regNumber").value);
+    const num = document.getElementById("regNumber").value.trim();
     const url = document.getElementById("regWebhook").value.trim();
 
-    if (num.length !== 10) return show("Enter a valid 10 digit number", true);
+    if (num.length < 1 || num.length > 20) return show("Number must be 1-20 characters", true);
     if (!url || !url.startsWith("http")) return show("Enter a valid webhook URL", true);
 
     registeredNumbers[num] = url;
@@ -275,8 +260,8 @@ function addRegisteredNumber() {
 }
 
 function blockNumber() {
-    let num = norm(document.getElementById("blockInput").value);
-    if (num.length !== 10) return show("Enter a valid 10 digit number", true);
+    let num = document.getElementById("blockInput").value.trim();
+    if (num.length < 1 || num.length > 20) return show("Enter a valid number (1-20 characters)", true);
     if (blockedNumbers.includes(num)) return show("Number already blocked");
     blockedNumbers.push(num);
     db.ref("blockedNumbers").set(blockedNumbers);
@@ -285,7 +270,7 @@ function blockNumber() {
 }
 
 function unblockNumber() {
-    let num = norm(document.getElementById("blockInput").value);
+    let num = document.getElementById("blockInput").value.trim();
     const idx = blockedNumbers.indexOf(num);
     if (idx === -1) return show("Number is not blocked");
     blockedNumbers.splice(idx, 1);
@@ -309,7 +294,7 @@ function toggleAuto() {
     document.getElementById("status").textContent = auto ? "Auto: ON" : "Auto: OFF";
     document.getElementById("countdown").textContent = auto ? `Next trigger in: ${countdown}s` : "Timer disabled";
     
-    updateTimerVisibility();   // ← Show/Hide timer when Auto changes
+    updateTimerVisibility();
 }
 
 function openBlockedModal() {
@@ -347,19 +332,20 @@ setInterval(() => {
     document.getElementById("ringText").textContent = countdown;
 }, 1000);
 
-// Live input cleaning - From = only digits, To = digits + * + #
+// Live input cleaning
 document.getElementById("fromNumber").addEventListener('input', () => {
     let val = document.getElementById("fromNumber").value;
-    val = val.replace(/\D/g, '').slice(0,10);
+    val = val.replace(/[^0-9*#]/g, '').slice(0,20);
     document.getElementById("fromNumber").value = val;
 });
 
 document.getElementById("toNumber").addEventListener('input', () => {
     let val = document.getElementById("toNumber").value;
-    val = val.replace(/[^0-9*#]/g, '').slice(0,11);
+    val = val.replace(/[^0-9*#]/g, '').slice(0,20);
     document.getElementById("toNumber").value = val;
 });
-// Initialize timer visibility on page load (Auto is OFF by default)
+
+// Initialize timer visibility
 updateTimerVisibility();
 </script>
 </body>
